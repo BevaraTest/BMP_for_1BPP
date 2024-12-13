@@ -748,6 +748,8 @@ static GF_Err BMP1BPP_filter_config_input(GF_Filter *filter, GF_FilterPid *pid, 
 static GF_Err base_filter_update_arg(GF_Filter *filter, const char *arg_name, const GF_PropertyValue *arg_val)
 {
 	return GF_OK;
+
+	
 }
 
 GF_Err base_filter_initialize(GF_Filter *filter)
