@@ -6,6 +6,7 @@
 #include <math.h>
 
 
+
 /* Type definitions */
 #ifndef UINT // 4 bytes
 	#define UINT	unsigned long int
@@ -559,6 +560,17 @@ static void base_filter_finalize(GF_Filter *filter)
 
 // }
 
+static const char *BMP1BPP_probe_data(const u8 *data, u32 size, GF_FilterProbeScore *score)
+{
+	/*BMP*/
+	if ((data[0] == 'B') && (data[1] == 'M')) {
+		*score = GF_FPROBE_SUPPORTED;
+		return "image/bmp";
+	}
+
+	return NULL;
+}
+
 static GF_Err BMP1BPP_filter_process(GF_Filter *filter)
 {
 	u8 *data_dst;
@@ -745,7 +757,7 @@ GF_Err base_filter_initialize(GF_Filter *filter)
 		//do something based on options
 
 	}
-	//if you filter is a source, this is the right place to start declaring output PIDs, such as above
+	//if your filter is a source, this is the right place to start declaring output PIDs, such as above
 
 	return GF_OK;
 }
@@ -781,8 +793,8 @@ const GF_FilterRegister BMP1BPPRegister = {
 	.finalize = base_filter_finalize,
 	SETCAPS(BMP1BPPFullCaps),
 	.process = BMP1BPP_filter_process,
-	.configure_pid = BMP1BPP_filter_config_input
-	
+	.configure_pid = BMP1BPP_filter_config_input,
+	.probe_data = BMP1BPP_probe_data
 	
 };
 
