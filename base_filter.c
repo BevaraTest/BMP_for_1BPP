@@ -759,6 +759,7 @@ GF_Err base_filter_initialize(GF_Filter *filter)
 	}
 	//if your filter is a source, this is the right place to start declaring output PIDs, such as above
 
+
 	return GF_OK;
 }
 
