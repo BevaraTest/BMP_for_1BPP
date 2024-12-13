@@ -638,7 +638,11 @@ static GF_Err BMP1BPP_filter_process(GF_Filter *filter)
 			return GF_NOT_SUPPORTED;
 	
 	// Flip, if needed. Leave here rather than doing in-place calculation. Uses memory, but simpler.
+
+	//for bedugging
 	bmp->Header.Orientation = 1;
+
+	
 	if (bmp->Header.Orientation == 0) // origin in lower-left
 		{
 			UCHAR * tmpData;
