@@ -11,7 +11,7 @@
         "video"
     ],
     "filter_source": {
-        "base_filter": "BMP1BPP_filter.c"
+        "BMP1BPP": "BMP1BPP_filter.c"
     },
     "Format": ["Audio", "Video"],
     "extension":{
