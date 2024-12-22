@@ -1,3 +1,17 @@
+/**************************************************************
+**
+** This code is a stripped-down version of the open-source BMP 
+** code and is used for demonstration purposes only. Most of the 
+** sanity checking has been removed to save space. Please take care
+** if you choose to use it. 
+**
+** Note that to start, the return values have already been translated
+** to GPAC Error Codes (GF_*). Key codes are GF_OK, GF_NOT_SUPPORTED, 
+** and GF_OUT_OF_MEM. The remainder of the error codes can be found at
+** https://doxygen.gpac.io/group__errors__grp.html
+** 
+***************************************************************/
+
 #include <gpac/filters.h>
 
 #include <stdio.h>
@@ -7,11 +21,11 @@
 
 
 /* Type definitions */
-#ifndef UINT // 4 bytes
+#ifndef UINT 
 	#define UINT	unsigned long int
 #endif
 
-#ifndef USHORT //2 bytes
+#ifndef USHORT 
 	#define USHORT	unsigned short
 #endif
 
@@ -19,23 +33,10 @@
 	#define SHORT	short
 #endif
 
-#ifndef UCHAR // 1 byte
+#ifndef UCHAR 
 	#define UCHAR	unsigned char
 #endif
 
-typedef  enum
- {
-   BI_RGB = 0x0000,
-   BI_RLE8 = 0x0001,
-   BI_RLE4 = 0x0002,
-   BI_BITFIELDS = 0x0003
-//    ,  //TAKEN FROM WINDOWS
-//    BI_JPEG = 0x0004,
-//    BI_PNG = 0x0005,
-//    BI_CMYK = 0x000B,
-//    BI_CMYKRLE8 = 0x000C,
-//    BI_CMYKRLE4 = 0x000D
- } Compression;
 
 /* Mask structure*/
 struct Bitfield_Mask
@@ -85,18 +86,15 @@ struct BMP_struct
 	
 };
 
-/* Meta info */
-int			BMP_GetWidth( );
-int			BMP_GetHeight( );
-
 
 /*********************************** Forward declarations **********************************/
 int		ReadHeader	( const char* bmp_data, const int size );
 int		ReadUINT	(  UINT* x, const char* bmp_data,  const int size );
 int		ReadINT	(  int* x, const char* bmp_data,  const int size );
 int		ReadUSHORT	(  USHORT *x, const char* bmp_data, const int size );
-int		BitfieldRange(UINT mask, UINT *range, UINT *lowBit);
 int 	dec1(const char* bmp_data);
+int		BMP_GetWidth( );
+int		BMP_GetHeight( );
 
 /* BMP representation and helper variables*/
 struct BMP_struct * bmp;
@@ -145,9 +143,9 @@ int	ReadHeader(const char* bmp_data, const int size )
 	little endian to the system's native representation. */
 
 	/* the first part is the general file header */
-	if ( !ReadUSHORT( &( bmp->Header.Magic ),bmp_data,size ) )			return GF_NOT_SUPPORTED;
+	if ( !ReadUSHORT( &( bmp->Header.Magic ),bmp_data,size ) )			
+		return GF_NOT_SUPPORTED;
 
-	/*early sanity check*/
 	
 	/* check the magic number options: BM, BA, CI, CP, IC, PT (little endian)*/
 	if (  bmp->Header.Magic != 0x4D42 && bmp->Header.Magic != 0x4D41 && bmp->Header.Magic != 0x4943 && bmp->Header.Magic != 0x5043 && bmp->Header.Magic != 0x5450)
@@ -192,16 +190,14 @@ int	ReadHeader(const char* bmp_data, const int size )
 	if ( !ReadUSHORT( &( bmp->Header.Reserved2 ), bmp_data,size ) )		return GF_NOT_SUPPORTED;
 	if ( !ReadUINT( &( bmp->Header.DataOffset ), bmp_data,size ) )		return GF_NOT_SUPPORTED;
 
-	/* the second part is the bitmap header --- there are multiple versions of this */
+	/* the second part is the bitmap header  */
 	if ( !ReadUINT( &( bmp->Header.HeaderSize ), bmp_data ,size) )		return GF_NOT_SUPPORTED;
 
-	/* sanity check first */
+	/* sanity check first - we are expecting a 40 byte header for the demo cases */
 	if ( bmp->Header.HeaderSize != 40 	)
 	{
 		return GF_NOT_SUPPORTED;
 	}
-
-	
 
 	/* Non-12-byte header cases*/
 	/* Common fields*/
@@ -223,69 +219,53 @@ int	ReadHeader(const char* bmp_data, const int size )
 
 	if (  bmp->Header.HeaderSize == 40) // Win Version 3s -  sanity check  and calculate the palette
 	{
-			// check the BBP and compression type for Win 3.x 
-			if ((bmp->Header.CompressionType < 0  ) || (bmp->Header.CompressionType > 3  ))
-			{
-				return GF_NOT_SUPPORTED;
-			}
-			if ((bmp->Header.BitsPerPixel != 1  ) && (bmp->Header.BitsPerPixel !=  4  ) &&  (bmp->Header.BitsPerPixel !=  8  ) && (bmp->Header.BitsPerPixel !=  24  )
+		// check the BBP and compression type for Win 3.x 
+		if ((bmp->Header.CompressionType < 0  ) || (bmp->Header.CompressionType > 3  ))
+		{
+			return GF_NOT_SUPPORTED;
+		}
+		if ((bmp->Header.BitsPerPixel != 1  ) && (bmp->Header.BitsPerPixel !=  4  ) &&  (bmp->Header.BitsPerPixel !=  8  ) && (bmp->Header.BitsPerPixel !=  24  )
 			 &&  (bmp->Header.BitsPerPixel !=  16  ) && (bmp->Header.BitsPerPixel !=  32  ))
+		{
+			return GF_NOT_SUPPORTED;
+		}
+
+		/* calculate the palette */
+		bmp->Header.PaletteElementSize = 4; /* The Win 3.x format uses a 4-byte palette*/
+		bmp->Header.PaletteSize = (bmp->Header.DataOffset - 54); /* 14-byte header and 40-byte bitmap header */
+		/* Sanity check if needed - ImageDataSize can be 0 for uncompressed images */
+		if ((bmp->Header.CompressionType != 0) && (bmp->Header.ImageDataSize != bmp->Header.FileSize - bmp->Header.DataOffset))
 			{
 				return GF_NOT_SUPPORTED;
 			}
-
-			// check whether a bit mask is used or calculate the palette
-			if ((bmp->Header.CompressionType == 3) && ( bmp->Header.BitsPerPixel == 16 || bmp->Header.BitsPerPixel == 32))
+		/* Otherwise allocate and read palette (color table), if present */
+		if (( bmp->Header.BitsPerPixel <= 8 ) && (bmp->Header.PaletteSize > 0) && (bmp->Header.BitMask == 0))
+			{
+				bmp->Palette = (UCHAR*) malloc( bmp->Header.PaletteSize * sizeof( UCHAR ) );
+				if ( bmp->Palette == NULL )
 				{
-				bmp->Header.BitMask = 1;
-				
-				// handle the BMP Version 3 bitfieldMask
-				// read each mask into an int and calculate its lower bit location and dynamic range
-				ReadUINT( &(bmp->Header.RedMask.mask), bmp_data ,size);	
-				BitfieldRange(bmp->Header.RedMask.mask, &(bmp->Header.RedMask.range), &(bmp->Header.RedMask.lowBit)); 
-				ReadUINT( &(bmp->Header.GreenMask.mask), bmp_data ,size);
-				BitfieldRange(bmp->Header.GreenMask.mask, &(bmp->Header.GreenMask.range), &(bmp->Header.GreenMask.lowBit));
-				ReadUINT( &( bmp->Header.BlueMask.mask), bmp_data ,size);
-				BitfieldRange(bmp->Header.BlueMask.mask, &(bmp->Header.BlueMask.range), &(bmp->Header.BlueMask.lowBit));
+					free( bmp );
+					return GF_NOT_SUPPORTED;
 				}
-			else{
-				// calculate the palette
-				bmp->Header.PaletteElementSize = 4; /* The Win 3.x format uses a 4-byte palette*/
-				bmp->Header.PaletteSize = (bmp->Header.DataOffset - 54); // 14-byte header and 40-byte bitmap header
-				// Sanity check if needed - ImageDataSize can be 0 for uncompressed images
-				if ((bmp->Header.CompressionType != 0) && (bmp->Header.ImageDataSize != bmp->Header.FileSize - bmp->Header.DataOffset))
-					{
-						return GF_NOT_SUPPORTED;
-					}
-				// Otherwise allocate and read palette (color table), if present 
-				if (( bmp->Header.BitsPerPixel <= 8 ) && (bmp->Header.PaletteSize > 0) && (bmp->Header.BitMask == 0))
-				{
-					
-					bmp->Palette = (UCHAR*) malloc( bmp->Header.PaletteSize * sizeof( UCHAR ) );
-					if ( bmp->Palette == NULL )
-					{
-						free( bmp );
-						return GF_NOT_SUPPORTED;
-					}
 
-					if ( dataInd+ bmp->Header.PaletteSize > size )
+				if ( dataInd+ bmp->Header.PaletteSize > size )
 					{
 						free( bmp->Palette );
 						free( bmp );
 						return GF_NOT_SUPPORTED;
 					}
-					else
+				else
 					{
 						memcpy(bmp->Palette,bmp_data+dataInd, bmp->Header.PaletteSize);
 						dataInd += bmp->Header.PaletteSize;
 					}
 				}
-				else	/* Not an indexed image */
-				{
-					bmp->Palette = NULL;
-				}	
+		else	/* Not an indexed image */
+			{
+				bmp->Palette = NULL;
 			}	
-	} // end of Win v3.x header read and check  
+				
+	}   
 
 	return GF_OK;
 }
@@ -357,79 +337,77 @@ int	ReadUSHORT( USHORT *x, const char* bmp_data, const int size )
 }
 
 
-int 	dec1(const char* bmp_data)
+/* this is function that handles the 1BPP format decode */
+int dec1(const char* bmp_data)
 {
 
 	int i,j,k;
-				scanLinePadding = 0;
-				if (bmp->Header.CompressionType == 0) // calculate only if uncompressed
-					{						
-						scanLinePadding = ((bmp->Header.FileSize - bmp->Header.DataOffset)/bmp->Header.Height)*8 - bmp->Header.Width;
-					}
+	scanLinePadding = 0;
+	if (bmp->Header.CompressionType == 0) /* calculate only if uncompressed */
+		{						
+			scanLinePadding = ((bmp->Header.FileSize - bmp->Header.DataOffset)/bmp->Header.Height)*8 - bmp->Header.Width;
+		}
 
-				if (bmp->Header.PaletteSize > 0)
-					{
+	if (bmp->Header.PaletteSize > 0)
+		{
 					
-					UCHAR *tmp = bmp->Data;
-					UINT dataOffset = 0;
-					UCHAR paletteIndex = 0; 
-					UINT paletteInt = 0;
+			UCHAR *tmp = bmp->Data;
+			UINT dataOffset = 0;
+			UCHAR paletteIndex = 0; 
+			UINT paletteInt = 0;
 
-					k=0; // k will index bits 0=high, 7=low
-					for (i=0; i<bmp->Header.Height; ++i)
+			k=0; /* k will index bits 0=high, 7=low */
+			for (i=0; i<bmp->Header.Height; ++i)
+				{
+					for (j=0; j<bmp->Header.Width; ++j) /* we'll be grabbing a char at a time from the data */
 						{
-							for (j=0; j<bmp->Header.Width; ++j) // we'll be grabbing a char at a time from the data
+							if (k==0)
 								{
-									if (k==0)
-									{
-
-										paletteIndex =  *(bmp_data+dataInd + dataOffset); // grab a char
-										++dataOffset;
-									}
+									paletteIndex =  *(bmp_data+dataInd + dataOffset); // grab a char
+									++dataOffset;
+								}
 									
-									// pull a bit from the char
-											paletteInt=  ((paletteIndex & (1 << (7-k))) > 0) ? 1 : 0;
-
+								/* pull a bit from the char */
+								paletteInt=  ((paletteIndex & (1 << (7-k))) > 0) ? 1 : 0;
 										
-											*(tmp) = *(bmp->Palette+paletteInt*bmp->Header.PaletteElementSize+2); 
-											++tmp;  
-											*(tmp) = *(bmp->Palette+paletteInt*bmp->Header.PaletteElementSize+1); 
-											++tmp; 
-											*(tmp) = *(bmp->Palette+paletteInt*bmp->Header.PaletteElementSize); 
-											++tmp; 
-											// taking out the alpha
-											//*(tmp) = 255; ++tmp;
-									
+								*(tmp) = *(bmp->Palette+paletteInt*bmp->Header.PaletteElementSize+2); 
+								++tmp;  
+								*(tmp) = *(bmp->Palette+paletteInt*bmp->Header.PaletteElementSize+1); 
+								++tmp; 
+								*(tmp) = *(bmp->Palette+paletteInt*bmp->Header.PaletteElementSize); 
+								++tmp; 
+								/* only include an alpha if forcing RGBA out */
+								/*  *(tmp) = 255; ++tmp; */
 									k = (k+1)%8;
-								}
-					 		// skip the rest of the padding, scanLinePadding is in nibbles
-							if (scanLinePadding % 2 == 0)
-								{
-									dataOffset += (int) (scanLinePadding/8);
-								}
-							else
-								{
-									dataOffset += (int) (scanLinePadding -1)/8;
-								}
-							k=0; // TODO: This is to be confirmed - is there ever the case of non-byte scanline?
-				 		}
+						}
+					 	/* skip the rest of the padding, scanLinePadding is in nibbles */
+						if (scanLinePadding % 2 == 0)
+							{
+								dataOffset += (int) (scanLinePadding/8);
+							}
+						else
+							{
+								dataOffset += (int) (scanLinePadding -1)/8;
+							}
+						k=0; 
+				}
 					
 					
 					
-					}
-				else {  // there might be a non-palette case - we do not have a device foreground/background so do black on white
-					UCHAR *tmp = bmp->Data;
-					UINT dataOffset = 0;
-					int bitIdx;
-					for (i=0; i<bmp->Header.Height; ++i)
-						{
-							for (j=0; j<bmp->Header.Width; j+=8) // we'll be grabbing a char at a time from the data
-								{
-									bitIdx =  *(bmp_data+dataInd + dataOffset); // grab a char
-									/* broken out so we can step through colormap*/
-									for (k=0; k<8; ++k)
-										{ //extract each bit from the char
-											if ((bitIdx & (1 << (7-k))) > 0)
+		}
+		else {  /* there might be a non-palette case - we do not have a device foreground/background so do black on white */
+				UCHAR *tmp = bmp->Data;
+				UINT dataOffset = 0;
+				int bitIdx;
+				for (i=0; i<bmp->Header.Height; ++i)
+					{
+						for (j=0; j<bmp->Header.Width; j+=8) /* we'll be grabbing a char at a time from the data */
+							{
+								bitIdx =  *(bmp_data+dataInd + dataOffset); // grab a char
+								/* broken out so we can step through colormap*/
+								for (k=0; k<8; ++k)
+									{ /*extract each bit from the char */
+										if ((bitIdx & (1 << (7-k))) > 0)
 											{
 												*(tmp) = 255; ++tmp;
 												*(tmp) = 255; ++tmp;
@@ -446,42 +424,13 @@ int 	dec1(const char* bmp_data)
 											//*(tmp) = 255; ++tmp;
 										}
 									dataOffset +=1;
-								}
-					 		dataOffset += scanLinePadding;
-				 		}
+							}
+					 	dataOffset += scanLinePadding;
+				 	}
 
-				}
+			}
 		
-
-
 	return GF_OK;
-}
-
-
-int		BitfieldRange(UINT mask, UINT *range, UINT *lowBit)
-{
-	UINT i;
-	*lowBit = 0;  // re-inited out of an abundancy of caution
-	*range = 255;
-	for (i=0; i<32; ++i)
-	{
-		if (mask & (1<<i))
-			{
-				*lowBit = i;
-				break;
-			}
-	}
-	for (i=31; i>=0; --i)
-	{
-		if (mask & (1 << i))
-			{
-				*range = ((1<<(i- *lowBit + 1)) -1 );
-				break;
-			}
-	}
-
-
-	return 1;
 }
 
 
@@ -499,65 +448,10 @@ static void base_filter_finalize(GF_Filter *filter)
 	//peform any finalyze routine needed, including potential free in the filter context
 	//if not needed, set the filter_finalize to NULL
 
-
-	// inserting test lines
 	// no return needed return GF_OK;
 
 }
 
-// static GF_Err BMP1BPP_filter_process(GF_Filter *filter)
-// {
-// 	u8 *data_dst;
-// 	const u8 *data_src;
-// 	u32 size;
-
-// 	GF_FilterPacket *pck_dst;
-// 	GF_BaseFilter *stack = (GF_BaseFilter *) gf_filter_get_udta(filter);
-
-// 	GF_FilterPacket *pck = gf_filter_pid_get_packet(stack->src_pid);
-// 	if (!pck) return GF_OK;
-// 	data_src = gf_filter_pck_get_data(pck, &size);
-
-
-// 	gf_filter_pid_set_property(stack->dst_pid, GF_PROP_PID_WIDTH, &PROP_UINT(320));
-// 	gf_filter_pid_set_property(stack->dst_pid, GF_PROP_PID_HEIGHT, &PROP_UINT(240));
-// 	gf_filter_pid_set_property(stack->dst_pid, GF_PROP_PID_STRIDE, &PROP_UINT(320*3));	
-
-//   	pck_dst = gf_filter_pck_new_alloc(stack->dst_pid, 320*240*3, &data_dst);
-	
-// 	int i;
-// 	for (i=0; i<320*240*3; i=i+3)
-// 	{
-// 		*(data_dst +i) = 255;
-// 		*(data_dst +i+1) = 0;
-// 		*(data_dst +i+2) = 0;
-
-// 	}
-
-
-// 	//produce output packet using memory allocation
-	
-// 	//pck_dst = gf_filter_pck_new_alloc(stack->dst_pid, size, &data_dst);
-// 	if (!pck_dst) return GF_OUT_OF_MEM;
-// 	//memcpy(data_dst, data_src, size);
-
-
-	
-	
-
-// 	//no need to adjust data framing
-// 	gf_filter_pck_set_framing(pck_dst, GF_TRUE, GF_TRUE);
-
-// 	//copy over src props to dst
-// 	gf_filter_pck_merge_properties(pck, pck_dst);
-// 	gf_filter_pck_set_dependency_flags(pck_dst, 0);
-
-// 	gf_filter_pck_send(pck_dst);
-
-// 	gf_filter_pid_drop_packet(stack->src_pid);
-// 	return GF_OK;
-
-// }
 
 static const char *BMP1BPP_probe_data(const u8 *data, u32 size, GF_FilterProbeScore *score)
 {
