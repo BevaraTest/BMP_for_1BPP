@@ -6,7 +6,7 @@ include(filters.cmake)
 add_definitions(-fpic)
 
 SET(FILTER_SRC
-        ${CMAKE_CURRENT_SOURCE_DIR}/base_filter.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/BMP1BPP_filter.c
 )
 
 SET(FILTER_LIB

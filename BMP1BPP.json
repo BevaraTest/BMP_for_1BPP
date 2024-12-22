@@ -2,16 +2,16 @@
     "name": "BMP1PP",
     "description": "BMP 1BPP",
     "filters": [
-        "base_filter"
+        "BMP1PP"
     ],
-    "help": "This filter handles a small subset of BMP images with little checking.",
+    "help": "This filter handles a small subset of BMP images for demo'ing open-source integration.",
     "support": [
         "image",
         "audio",
         "video"
     ],
     "filter_source": {
-        "base_filter": "base_filter.c"
+        "base_filter": "BMP1BPP_filter.c"
     },
     "Format": ["Audio", "Video"],
     "extension":{
