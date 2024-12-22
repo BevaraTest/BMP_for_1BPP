@@ -6,7 +6,6 @@
 #include <math.h>
 
 
-
 /* Type definitions */
 #ifndef UINT // 4 bytes
 	#define UINT	unsigned long int
