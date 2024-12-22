@@ -2,7 +2,7 @@
     "name": "BMP1PP",
     "description": "BMP 1BPP",
     "filters": [
-        "BMP1PP"
+        "BMP1BPP"
     ],
     "help": "This filter handles a small subset of BMP images for demo'ing open-source integration.",
     "support": [
