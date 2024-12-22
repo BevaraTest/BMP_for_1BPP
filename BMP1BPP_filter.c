@@ -629,6 +629,7 @@ static GF_Err BMP1BPP_filter_process(GF_Filter *filter)
 	}
 	
 
+
 	
 	/* do the decode */
 	if (bmp->Header.BitsPerPixel == 1)
