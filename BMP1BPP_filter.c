@@ -630,6 +630,7 @@ static GF_Err BMP1BPP_filter_process(GF_Filter *filter)
 	
 
 
+
 	
 	/* do the decode */
 	if (bmp->Header.BitsPerPixel == 1)
@@ -641,7 +642,7 @@ static GF_Err BMP1BPP_filter_process(GF_Filter *filter)
 
 
 //for debugging
-		bmp->Header.Orientation == 1;
+		bmp->Header.Orientation = 1;
 	
 	// Flip, if needed. Leave here rather than doing in-place calculation. Uses memory, but simpler.
 	if (bmp->Header.Orientation == 0) // origin in lower-left
