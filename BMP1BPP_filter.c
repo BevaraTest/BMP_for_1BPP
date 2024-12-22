@@ -642,8 +642,6 @@ static GF_Err BMP1BPP_filter_process(GF_Filter *filter)
 	//for bedugging
 	bmp->Header.Orientation = 1;
 
-	
-	
 
 	if (bmp->Header.Orientation == 0) // origin in lower-left
 		{
