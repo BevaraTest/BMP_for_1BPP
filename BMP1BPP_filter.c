@@ -627,9 +627,6 @@ static GF_Err BMP1BPP_filter_process(GF_Filter *filter)
 		return GF_OUT_OF_MEM;
 	}
 	
-
-
-
 	
 	/* do the decode */
 	if (bmp->Header.BitsPerPixel == 1)
