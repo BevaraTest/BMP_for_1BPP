@@ -628,6 +628,7 @@ static GF_Err BMP1BPP_filter_process(GF_Filter *filter)
 		return GF_OUT_OF_MEM;
 	}
 	
+
 	
 	/* do the decode */
 	if (bmp->Header.BitsPerPixel == 1)
@@ -636,13 +637,12 @@ static GF_Err BMP1BPP_filter_process(GF_Filter *filter)
 	}
 	else // shouldn't reach here if did earlier sanity check 
 			return GF_NOT_SUPPORTED;
+
+
+//for debugging
+		bmp->Header.Orientation == 1;
 	
 	// Flip, if needed. Leave here rather than doing in-place calculation. Uses memory, but simpler.
-
-	//for bedugging
-	bmp->Header.Orientation = 1;
-
-
 	if (bmp->Header.Orientation == 0) // origin in lower-left
 		{
 			UCHAR * tmpData;
